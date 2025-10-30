@@ -3,11 +3,15 @@ import { createContext, useContext, useState } from "react";
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
+  // ✅ Dynamic backend URL switch
+  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
   const [events, setEvents] = useState([]);
   const [user, setUser] = useState(null);
 
+  // ✅ Google Login redirect dynamic
   const signIn = () => {
-    window.location.href = "http://localhost:5000/api/auth/google";
+    window.location.href = `${API_URL}/api/auth/google`;
   };
 
   const logout = () => {
@@ -16,30 +20,43 @@ export const AuthProvider = ({ children }) => {
     window.location.href = "/";
   };
 
+  // ✅ Fetch events from backend
   const fetchEvents = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/auth/events", {
-        credentials: "include",
+      const res = await fetch(`${API_URL}/api/auth/events`, {
+        credentials: "include", // ✅ keep cookies/session
       });
+
       const data = await res.json();
 
-      setEvents(data.events || []);
+      if (data.error) {
+        console.log("Auth error:", data.error);
+        return;
+      }
 
-      if (data.events?.length > 0) {
-        const first = data.events[0];
+      setEvents(data || []);
+
+      // ✅ auto set user from calendar data
+      if (data.length > 0) {
         setUser({
-          email: first.organizer?.email || "",
-          name: first.organizer?.displayName || "User",
+          email: data[0]?.organizer?.email,
+          name: data[0]?.organizer?.displayName || "User",
         });
       }
-    } catch (e) {
-      console.log("Event fetch error", e);
+    } catch (err) {
+      console.log("Event fetch error", err);
     }
   };
 
   return (
     <AuthContext.Provider
-      value={{ events, fetchEvents, signIn, logout, user, setUser }}
+      value={{
+        events,
+        fetchEvents,
+        signIn,
+        logout,
+        user,
+      }}
     >
       {children}
     </AuthContext.Provider>
