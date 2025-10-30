@@ -1,5 +1,5 @@
 // client/src/api.js
-const API_URL = https://calendarcustomdashboard.onrender.com;
+const API_URL = "https://calendarcustomdashboard.onrender.com";
 if (!API_URL) {
   console.error("❌ REACT_APP_API_URL is not set. Please set it to your backend URL.");
   // redirect to server-down so user sees friendly message
