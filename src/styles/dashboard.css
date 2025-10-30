@@ -1,0 +1,157 @@
+/* ----------- Layout ----------- */
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  background: #f6f7fb;
+  margin: 0;
+}
+
+.dashboard-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: auto;
+}
+
+/* ----------- Toolbar ----------- */
+
+.toolbar {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.toolbar-section {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f2f2f2;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+.search-box input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  width: 180px;
+}
+
+/* ----------- Inputs ----------- */
+
+.date-input {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.clear-btn {
+  font-size: 12px;
+  color: #0066ff;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* ----------- Buttons ----------- */
+
+.btn {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-primary {
+  background: #4f46e5;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #3c35c4;
+}
+
+.btn-toggle {
+  border: 1px solid #aaa;
+  background: #eee;
+}
+
+.btn-toggle.active {
+  background: #ddebff;
+  border-color: #4f46e5;
+  color: #2a43a9;
+}
+
+/* ----------- Table ----------- */
+
+.table-container {
+  background: white;
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.08);
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+thead {
+  background: #4f46e5;
+  color: white;
+}
+
+th,
+td {
+  padding: 12px;
+  text-align: left;
+}
+
+tbody tr:nth-child(even) {
+  background: #f9f9f9;
+}
+
+tbody tr:hover {
+  background: #eef3ff;
+}
+
+/* ----------- Pagination ----------- */
+
+.pagination {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.pagination button {
+  padding: 6px 10px;
+  border: 1px solid #aaa;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.pagination button:disabled {
+  background: #ddd;
+  cursor: not-allowed;
+}
