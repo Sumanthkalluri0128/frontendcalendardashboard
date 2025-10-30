@@ -4,7 +4,7 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   // ✅ Dynamic backend URL switch
-  const API_URL = "https://frontendcalendardashboard.vercel.app";
+  const API_URL = "https://calendarcustomdashboard.onrender.com";
 
   const [events, setEvents] = useState([]);
   const [user, setUser] = useState(null);
