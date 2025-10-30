@@ -1,5 +1,6 @@
+// frontend/src/Dashboard.jsx
 import { useEffect, useState } from "react";
-import { useAuth } from "../context/AuthContext"; // Make sure this path is correct
+import { useAuth } from "../context/AuthContext";
 import Header from "../components/Header";
 import EventToolbar from "../components/EventToolbar";
 import EventTable from "../components/EventTable";
@@ -7,7 +8,6 @@ import { exportToCSV } from "../utils/exportCSV";
 import "../styles/dashboard.css";
 
 export default function Dashboard() {
-  // Add loading and error from the context
   const { events, fetchEvents, user, loading, error } = useAuth();
 
   const [search, setSearch] = useState("");
@@ -19,11 +19,10 @@ export default function Dashboard() {
   const perPage = 10;
 
   useEffect(() => {
-    // Only fetch events if we have a user
     if (user) {
       fetchEvents();
     }
-  }, [user]); // Re-run if the user object changes
+  }, [user, fetchEvents]);
 
   const isMeeting = (e) =>
     e?.attendees?.some((a) => a.email === user?.email) &&
@@ -31,7 +30,7 @@ export default function Dashboard() {
 
   let filtered = events.filter((e) => {
     const s = search.toLowerCase();
-    const date = new Date(e.start.dateTime || e.start.date);
+    const date = new Date(e.start.dateTime || e.start.date || 0);
 
     return (
       (e.summary?.toLowerCase().includes(s) ||
@@ -43,10 +42,9 @@ export default function Dashboard() {
 
   if (meetingsOnly) filtered = filtered.filter(isMeeting);
 
-  const totalPages = Math.ceil(filtered.length / perPage);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const paginated = filtered.slice((page - 1) * perPage, page * perPage);
 
-  // --- ADD LOADING AND ERROR UI ---
   const renderContent = () => {
     if (loading && events.length === 0) {
       return <div className="dashboard-message">Loading events...</div>;
@@ -94,7 +92,6 @@ export default function Dashboard() {
   return (
     <>
       <Header />
-
       <div className="dashboard-container">
         <EventToolbar
           search={search}
@@ -107,7 +104,6 @@ export default function Dashboard() {
           setMeetingsOnly={setMeetingsOnly}
           exportCSV={() => exportToCSV(filtered)}
         />
-        
         {renderContent()}
       </div>
     </>
