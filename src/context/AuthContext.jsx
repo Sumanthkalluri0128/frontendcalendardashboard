@@ -1,13 +1,6 @@
-// frontend/src/AuthContext.jsx
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-} from "react";
-
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+// client/src/context/AuthContext.jsx
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { apiFetch } from "../api";
 
 const AuthContext = createContext();
 
@@ -21,48 +14,29 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/api/auth/events`, {
-        credentials: "include",
-      });
-
-      if (res.status === 401) {
-        setEvents([]);
-        setUser(null);
-        return;
-      }
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to fetch events");
-      }
-
-      const data = await res.json();
+      const data = await apiFetch("/api/auth/events", { method: "GET" });
       setEvents(data.events || []);
     } catch (err) {
-      console.error("Event fetch error", err);
-      setError(err.message);
-      setEvents([]);
+      if (err.status === 401) {
+        setUser(null);
+        setEvents([]);
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // try to restore session on mount
   useEffect(() => {
+    // restore session
     const init = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/auth/me`, {
-          credentials: "include",
-        });
-        if (res.ok) {
-          const userData = await res.json();
-          setUser(userData);
-          await fetchEvents();
-        } else {
-          setUser(null);
-        }
+        const data = await apiFetch("/api/auth/me", { method: "GET" });
+        setUser(data);
+        await fetchEvents();
       } catch (err) {
-        console.error("Init auth error", err);
+        // if backend returned 401 or redirect happened, user stays null
         setUser(null);
       } finally {
         setLoading(false);
@@ -72,12 +46,13 @@ export const AuthProvider = ({ children }) => {
   }, [fetchEvents]);
 
   const signIn = () => {
-    window.location.href = `${API_URL}/api/auth/google`;
+    const BACKEND_URL = process.env.REACT_APP_API_URL;
+    window.location.href = `${BACKEND_URL}/api/auth/google`;
   };
 
   const logout = async () => {
     try {
-      await fetch(`${API_URL}/api/auth/logout`, {
+      await fetch(`${process.env.REACT_APP_API_URL}/api/auth/logout`, {
         method: "POST",
         credentials: "include",
       });
@@ -91,9 +66,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider
-      value={{ events, fetchEvents, signIn, logout, user, loading, error }}
-    >
+    <AuthContext.Provider value={{ events, fetchEvents, signIn, logout, user, loading, error }}>
       {children}
     </AuthContext.Provider>
   );
