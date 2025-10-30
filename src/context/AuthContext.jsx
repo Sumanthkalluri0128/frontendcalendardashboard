@@ -1,15 +1,45 @@
-import { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
+import User from "../models/User.js"; // Import your User model
+
+// --- THIS IS THE CRITICAL FIX ---
+// The API_URL must be your BACKEND URL (Render), not your frontend (Vercel).
+const API_URL = "https://calendarcustomdashboard.onrender.com";
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  // ✅ Dynamic backend URL switch
-  const API_URL = "https://calendarcustomdashboard.onrender.com";
-
   const [events, setEvents] = useState([]);
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true); // Start true for initial user fetch
+  const [error, setError] = useState(null);
 
-  // ✅ Google Login redirect dynamic
+  // On initial app load, try to fetch the currently logged-in user
+  // This checks if a session cookie already exists
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/auth/me`, {
+          credentials: "include", // Send the session cookie
+        });
+
+        if (res.ok) {
+          const userData = await res.json();
+          setUser(userData);
+        } else {
+          setUser(null);
+        }
+      } catch (err) {
+        console.error("Error fetching user", err);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  // --- UPDATED: Points to the backend API route ---
   const signIn = () => {
     window.location.href = `${API_URL}/api/auth/google`;
   };
@@ -17,34 +47,32 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     setEvents([]);
-    window.location.href = "/";
+    window.location.href = "/"; // Redirect to homepage
   };
 
-  // ✅ Fetch events from backend
+  // --- UPDATED: More robust error handling ---
   const fetchEvents = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const res = await fetch(`${API_URL}/api/auth/events`, {
-        credentials: "include", // ✅ keep cookies/session
+        credentials: "include", // ✅ This is correct
       });
 
+      if (!res.ok) {
+        // If response is not 200 (e.g., 401 Unauthorized), throw an error
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to fetch events");
+      }
+
       const data = await res.json();
-
-      if (data.error) {
-        console.log("Auth error:", data.error);
-        return;
-      }
-
-      setEvents(data || []);
-
-      // ✅ auto set user from calendar data
-      if (data.length > 0) {
-        setUser({
-          email: data[0]?.organizer?.email,
-          name: data[0]?.organizer?.displayName || "User",
-        });
-      }
+      setEvents(data.events || []); // The backend sends { events: [...] }
     } catch (err) {
-      console.log("Event fetch error", err);
+      console.error("Event fetch error", err);
+      setError(err.message);
+      setEvents([]); // Clear events on error
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -56,6 +84,8 @@ export const AuthProvider = ({ children }) => {
         signIn,
         logout,
         user,
+        loading,
+        error,
       }}
     >
       {children}
