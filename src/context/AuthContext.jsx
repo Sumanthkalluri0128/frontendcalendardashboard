@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import User from "../models/User.js"; // Import your User model
+// DO NOT import the User model here
 
 // --- THIS IS THE CRITICAL FIX ---
 // The API_URL must be your BACKEND URL (Render), not your frontend (Vercel).
