@@ -1,20 +1,15 @@
+// frontend/src/api.js
 import axios from "axios";
 
-// This is your DEPLOYED backend URL
-export const API_BASE_URL = "https://calendarcustomdashboard.onrender.com/api";
+// base backend URL (no trailing slash)
+export const API_BASE_URL = process.env.REACT_APP_API_URL
+  ? `${process.env.REACT_APP_API_URL.replace(/\/$/, "")}/api`
+  : "http://localhost:5000/api";
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  withCredentials: true, // This sends the cookie
+  withCredentials: true,
 });
 
-// --- Function 1: Get Events ---
-export const fetchCalendarEvents = () => {
-  return apiClient.get("/auth/getCalendarEvents");
-};
-
-// --- Function 2: Get the Logged-in User ---
-// This hits a new backend route we will create
-export const fetchCurrentUser = () => {
-  return apiClient.get("/auth/me");
-};
+export const fetchCalendarEvents = () => apiClient.get("/auth/events");
+export const fetchCurrentUser = () => apiClient.get("/auth/me");
