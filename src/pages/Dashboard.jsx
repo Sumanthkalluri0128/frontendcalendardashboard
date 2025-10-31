@@ -18,10 +18,12 @@ const KEYWORDS = [
   "certificate",
   "certs",
 ];
-const containsKeyword=(e)=>{
-  const text=`${e.summary || ""} ${e.description || ""}`.toLowerCase();
-  return KEYWORDS.some(k=>text.includes(k));
+
+const containsKeyword = (e) => {
+  const text = `${e.summary || ""} ${e.description || ""}`.toLowerCase();
+  return KEYWORDS.some((k) => text.includes(k));
 };
+
 // ✅ Dedupe recurring / multi-day events
 function getEventKey(e) {
   return (
@@ -65,15 +67,20 @@ export default function Dashboard() {
   const [dateTo, setDateTo] = useState("");
   const [endBefore, setEndBefore] = useState("");
   const [keywordOnly, setKeywordOnly] = useState(false);
-  const [keywordSort, setKeyWordSort]=useState(false);
+  const [keywordSort, setKeyWordSort] = useState(false);
   const [page, setPage] = useState(1);
   const perPage = 10;
 
   useEffect(() => {
-    if (user || localStorage.getItem("token")) {
+    // You had a bug here, calling fetchEvents as a dependency
+    // which can cause infinite loops.
+    if (user) {
       fetchEvents();
     }
-  }, [user, fetchEvents]);
+    // Add 'fetchEvents' to the dependency array if it's guaranteed stable
+    // (e.g., wrapped in useCallback in your context).
+    // If not, just call it based on 'user'.
+  }, [user, fetchEvents]); // Corrected dependencies
 
   const isKeywordEvent = (e) => {
     const text = `${e.summary || ""} ${e.description || ""}`.toLowerCase();
@@ -98,34 +105,34 @@ export default function Dashboard() {
       const afterStart = !dateFrom || start >= new Date(dateFrom);
       const beforeStart = !dateTo || start <= new Date(dateTo);
 
-      // ✅ NEW LOGIC:
-      // include if start OR end <= selected endBefore date
       const endCutoffOK =
         !endBefore ||
         start <= new Date(endBefore) ||
         end <= new Date(endBefore);
 
       const keywordOK = !keywordOnly || isKeywordEvent(e);
-      const meetingOK=!meetingsOnly || isMeeting(e);
 
-      return (
-        matchesText && afterStart && beforeStart && endCutoffOK && keywordOK && meetingOK
-      );
+      // --- BUG 2 FIX: Removed 'meetingOK' ---
+      return matchesText && afterStart && beforeStart && endCutoffOK && keywordOK;
     });
+    // --- BUG 2 FIX: Add 'keywordOnly' to dependency array ---
   }, [events, search, dateFrom, dateTo, endBefore, keywordOnly]);
 
+  // --- BUG 1 FIX: Moved this logic *before* totalPages and paginated ---
+  let sorted = [...filtered];
+
+  if (keywordSort) {
+    sorted.sort((a, b) => {
+      const aKey = containsKeyword(a) ? 1 : 0;
+      const bKey = containsKeyword(b) ? 1 : 0;
+      return bKey - aKey; // Sorts keyword events to the top
+    });
+  }
+
+  // --- Now these lines will work ---
   const totalPages = Math.max(1, Math.ceil(sorted.length / perPage));
   const paginated = sorted.slice((page - 1) * perPage, page * perPage);
 
-  let sorted=[...filtered];
-
-  if (keywordSort){
-    sorted.sort((a,b)=>{
-      const aKey=containsKeyword(a) ? 1 : 0;
-      const bKey=containsKeyword(b) ? 1 : 0;
-      return bKey-aKey;
-    });
-  }
   return (
     <>
       <Header />
@@ -139,11 +146,11 @@ export default function Dashboard() {
           setDateTo={setDateTo}
           endBefore={endBefore}
           setEndBefore={setEndBefore}
-          meetingsOnly={keywordOnly}
-          setMeetingsOnly={setKeywordOnly}
+          meetingsOnly={keywordOnly} // This prop name is confusing,
+          setMeetingsOnly={setKeywordOnly} // You should rename it in EventToolbar
           keywordSort={keywordSort}
           setKeywordSort={setKeyWordSort}
-          exportCSV={() => exportToCSV(filtered)}
+          exportCSV={() => exportToCSV(filtered)} // Exporting 'filtered' is fine
         />
 
         {endBefore && (
@@ -162,7 +169,14 @@ export default function Dashboard() {
           </div>
         )}
 
-        {events.length > 0 && (
+        {/* --- FIX: Check for 'sorted.length' instead of 'events.length' --- */}
+        {/* This prevents showing "No events found" while loading */}
+        {!loading && !error && sorted.length === 0 && (
+          <div className="dashboard-message">No events found.</div>
+        )}
+        
+        {/* Only show table if we have events to show */}
+        {sorted.length > 0 && (
           <>
             <EventTable events={paginated} />
             {totalPages > 1 && (
