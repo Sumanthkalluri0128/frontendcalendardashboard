@@ -19,46 +19,48 @@ const KEYWORDS = [
   "certs",
 ];
 
-// ✅ robust dedupe key resolver
+// ✅ unified key to group recurring & multi-day events
 function getEventKey(e) {
   if (e.recurringEventId) return `r:${e.recurringEventId}`;
   if (e.iCalUID) return `i:${e.iCalUID}`;
   if (e.id) return `id:${e.id}`;
 
-  // fallback
   const s = e.summary || "";
   const startRaw = e.start?.dateTime || e.start?.date || "";
-  const endRaw = e.end?.dateTime || e.end?.date || "";
-  return `f:${s}|${startRaw}|${endRaw}`;
+  return `f:${s}|${startRaw}`;
 }
 
-// ✅ dedupe multi-day & recurring properly
+// ✅ Merge multi-day events: earliest start + latest end
 function uniqueByKey(events) {
-  const map = new Map();
+  const groups = new Map();
 
   for (const ev of events) {
     const key = getEventKey(ev);
+    const evStart = new Date(ev.start?.dateTime || ev.start?.date || 0);
+    const evEnd = new Date(ev.end?.dateTime || ev.end?.date || 0);
 
-    if (!map.has(key)) {
-      map.set(key, ev);
+    if (!groups.has(key)) {
+      groups.set(key, {
+        ...ev,
+        _start: evStart,
+        _end: evEnd,
+      });
       continue;
     }
 
-    // already have one — keep earliest start
-    const existing = map.get(key);
-    const existingStart = new Date(
-      existing.start?.dateTime || existing.start?.date || 0
-    ).getTime();
-    const newStart = new Date(
-      ev.start?.dateTime || ev.start?.date || 0
-    ).getTime();
+    const existing = groups.get(key);
 
-    if (newStart < existingStart) {
-      map.set(key, ev);
-    }
+    if (evStart < existing._start) existing._start = evStart;
+    if (evEnd > existing._end) existing._end = evEnd;
+
+    groups.set(key, existing);
   }
 
-  return Array.from(map.values());
+  return Array.from(groups.values()).map((ev) => ({
+    ...ev,
+    start: { dateTime: ev._start.toISOString() },
+    end: { dateTime: ev._end.toISOString() },
+  }));
 }
 
 export default function Dashboard() {
@@ -78,28 +80,25 @@ export default function Dashboard() {
     }
   }, [user, fetchEvents]);
 
-  // ✅ keyword detector
   const isKeywordEvent = (e) => {
     const text = `${e.summary || ""} ${e.description || ""}`.toLowerCase();
-    return KEYWORDS.some((keyword) => text.includes(keyword));
+    return KEYWORDS.some((k) => text.includes(k));
   };
 
-  // ✅ prepare deduped & filtered events
   const filtered = useMemo(() => {
     if (!events) return [];
 
     const uniqueEvents = uniqueByKey(events);
 
     return uniqueEvents.filter((e) => {
-      const s = search.toLowerCase();
+      const text = search.toLowerCase();
       const textMatch =
-        (e.summary || "").toLowerCase().includes(s) ||
-        (e.organizer?.email || "").toLowerCase().includes(s);
+        (e.summary || "").toLowerCase().includes(text) ||
+        (e.organizer?.email || "").toLowerCase().includes(text);
 
       const date = new Date(e.start.dateTime || e.start.date || 0);
       const fromOK = !dateFrom || date >= new Date(dateFrom);
       const toOK = !dateTo || date <= new Date(dateTo);
-
       const keywordOK = !keywordOnly || isKeywordEvent(e);
 
       return textMatch && fromOK && toOK && keywordOK;
