@@ -30,7 +30,7 @@ function getEventKey(e) {
   return `f:${s}|${startRaw}`;
 }
 
-// ✅ Merge multi-day events: earliest start + latest end
+// ✅ merge multi-day & recurring events properly
 function uniqueByKey(events) {
   const groups = new Map();
 
@@ -48,18 +48,15 @@ function uniqueByKey(events) {
       continue;
     }
 
-    const existing = groups.get(key);
-
-    if (evStart < existing._start) existing._start = evStart;
-    if (evEnd > existing._end) existing._end = evEnd;
-
-    groups.set(key, existing);
+    const e = groups.get(key);
+    if (evStart < e._start) e._start = evStart;
+    if (evEnd > e._end) e._end = evEnd;
   }
 
-  return Array.from(groups.values()).map((ev) => ({
-    ...ev,
-    start: { dateTime: ev._start.toISOString() },
-    end: { dateTime: ev._end.toISOString() },
+  return Array.from(groups.values()).map((e) => ({
+    ...e,
+    start: { dateTime: e._start.toISOString() },
+    end: { dateTime: e._end.toISOString() },
   }));
 }
 
@@ -69,6 +66,7 @@ export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [endBefore, setEndBefore] = useState(""); // ✅ NEW FILTER
   const [keywordOnly, setKeywordOnly] = useState(false);
 
   const [page, setPage] = useState(1);
@@ -85,72 +83,33 @@ export default function Dashboard() {
     return KEYWORDS.some((k) => text.includes(k));
   };
 
+  // ✅ final filtering logic
   const filtered = useMemo(() => {
     if (!events) return [];
 
     const uniqueEvents = uniqueByKey(events);
 
     return uniqueEvents.filter((e) => {
-      const text = search.toLowerCase();
+      const s = search.toLowerCase();
       const textMatch =
-        (e.summary || "").toLowerCase().includes(text) ||
-        (e.organizer?.email || "").toLowerCase().includes(text);
+        (e.summary || "").toLowerCase().includes(s) ||
+        (e.organizer?.email || "").toLowerCase().includes(s);
 
-      const date = new Date(e.start.dateTime || e.start.date || 0);
-      const fromOK = !dateFrom || date >= new Date(dateFrom);
-      const toOK = !dateTo || date <= new Date(dateTo);
+      const start = new Date(e.start.dateTime || e.start.date || 0);
+      const end = new Date(e.end.dateTime || e.end.date || 0);
+
+      const fromOK = !dateFrom || start >= new Date(dateFrom);
+      const toOK = !dateTo || start <= new Date(dateTo);
+      const endBeforeOK = !endBefore || end <= new Date(endBefore);
+
       const keywordOK = !keywordOnly || isKeywordEvent(e);
 
-      return textMatch && fromOK && toOK && keywordOK;
+      return textMatch && fromOK && toOK && endBeforeOK && keywordOK;
     });
-  }, [events, search, dateFrom, dateTo, keywordOnly]);
+  }, [events, search, dateFrom, dateTo, endBefore, keywordOnly]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const paginated = filtered.slice((page - 1) * perPage, page * perPage);
-
-  const renderContent = () => {
-    if (loading && events.length === 0) {
-      return <div className="dashboard-message">Loading events...</div>;
-    }
-
-    if (error) {
-      return (
-        <div className="dashboard-message error">
-          Error: {error}. Please try logging in again.
-        </div>
-      );
-    }
-
-    if (events.length === 0) {
-      return (
-        <div className="dashboard-message">
-          No events found in your calendar.
-        </div>
-      );
-    }
-
-    return (
-      <>
-        <EventTable events={paginated} />
-        {totalPages > 1 && (
-          <div className="pagination">
-            <button disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
-              Prev
-            </button>
-            <span>
-              Page {page} / {totalPages}
-            </span>
-            <button
-              disabled={page === totalPages}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-            </button>
-          </div>
-        )}
-      </>
-    );
-  };
 
   return (
     <>
@@ -163,11 +122,53 @@ export default function Dashboard() {
           setDateFrom={setDateFrom}
           dateTo={dateTo}
           setDateTo={setDateTo}
+          endBefore={endBefore} // ✅ NEW
+          setEndBefore={setEndBefore} // ✅ NEW
           meetingsOnly={keywordOnly}
           setMeetingsOnly={setKeywordOnly}
           exportCSV={() => exportToCSV(filtered)}
         />
-        {renderContent()}
+
+        {loading && events.length === 0 && (
+          <div className="dashboard-message">Loading events...</div>
+        )}
+
+        {error && (
+          <div className="dashboard-message error">
+            Error: {error}. Please try logging in again.
+          </div>
+        )}
+
+        {!loading && events.length === 0 && (
+          <div className="dashboard-message">
+            No events found in your calendar.
+          </div>
+        )}
+
+        {!loading && events.length > 0 && (
+          <>
+            <EventTable events={paginated} />
+            {totalPages > 1 && (
+              <div className="pagination">
+                <button
+                  disabled={page === 1}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  Prev
+                </button>
+                <span>
+                  Page {page} / {totalPages}
+                </span>
+                <button
+                  disabled={page === totalPages}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </>
   );

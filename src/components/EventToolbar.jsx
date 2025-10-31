@@ -1,4 +1,4 @@
-import { Download, Users, Search } from "lucide-react";
+import { Download, Search, Filter } from "lucide-react";
 
 export default function EventToolbar({
   search,
@@ -7,12 +7,15 @@ export default function EventToolbar({
   setDateFrom,
   dateTo,
   setDateTo,
+  endBefore,
+  setEndBefore, // ✅ new props
   meetingsOnly,
   setMeetingsOnly,
   exportCSV,
 }) {
   return (
     <div className="toolbar">
+      {/* Search */}
       <div className="toolbar-section">
         <div className="search-box">
           <Search size={16} />
@@ -24,6 +27,7 @@ export default function EventToolbar({
         </div>
       </div>
 
+      {/* Date Filters */}
       <div className="toolbar-section">
         <input
           type="date"
@@ -37,23 +41,32 @@ export default function EventToolbar({
           value={dateTo}
           onChange={(e) => setDateTo(e.target.value)}
         />
+        <input
+          type="date"
+          className="date-input"
+          value={endBefore}
+          onChange={(e) => setEndBefore(e.target.value)}
+        />
+
         <span
           className="clear-btn"
           onClick={() => {
             setDateFrom("");
             setDateTo("");
+            setEndBefore("");
           }}
         >
           Clear
         </span>
       </div>
 
+      {/* Filters & Export */}
       <div className="toolbar-section">
         <button
           className={`btn btn-toggle ${meetingsOnly ? "active" : ""}`}
           onClick={() => setMeetingsOnly(!meetingsOnly)}
         >
-          <Users size={14} /> Cert & Password activities
+          <Filter size={14} /> Expiry Events
         </button>
 
         <button className="btn btn-primary" onClick={exportCSV}>
