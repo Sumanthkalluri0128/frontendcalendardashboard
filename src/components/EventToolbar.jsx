@@ -9,9 +9,11 @@ export default function EventToolbar({
   setDateTo,
   endBefore,
   setEndBefore,
-  meetingsOnly,
-  setMeetingsOnly,
+  meetingsOnly, // This is your 'keywordOnly' state from Dashboard
+  setMeetingsOnly, // This is your 'setKeywordOnly' from Dashboard
   exportCSV,
+  keywordSort, // <-- ADD THIS
+  setKeywordSort, // <-- ADD THIS
 }) {
   return (
     <div className="toolbar">
@@ -74,9 +76,15 @@ export default function EventToolbar({
         >
           Expiry Filter
         </button>
-        <label className="filter-label">Meetings Only</label>
-        <button className={`btn btn-toggle ${keywordSort ? "active" : ""}`} onClick={()=>setKeyWordSort(!keywordSort)}>
-          Meetings Only</button>
+
+        {/* --- ADDED BUTTON FOR KEYWORD SORT --- */}
+        <label className="filter-label">Sort by Expiry</label>
+        <button
+          className={`btn btn-toggle ${keywordSort ? "active" : ""}`}
+          onClick={() => setKeywordSort(!keywordSort)}
+        >
+          Sort
+        </button>
 
         <button className="btn btn-primary" onClick={exportCSV}>
           <Download size={14} /> Export CSV
