@@ -46,8 +46,11 @@ export default function Dashboard() {
 
     return KEYWORDS.some((keyword) => text.includes(keyword));
   };
-
-  let filtered = events.filter((e) => {
+  // ✅ Remove duplicate instances of multi-day events
+  const uniqueEvents = Array.from(
+    new Map(events.map((e) => [e.id, e])).values()
+  );
+  let filtered = uniqueEvents.filter((e) => {
     const s = search.toLowerCase();
     const date = new Date(e.start.dateTime || e.start.date || 0);
 
