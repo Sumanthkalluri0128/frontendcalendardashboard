@@ -18,7 +18,10 @@ const KEYWORDS = [
   "certificate",
   "certs",
 ];
-
+const containsKeyword=(e)=>{
+  const text=`${e.summary || ""} ${e.description || ""}`.toLowerCase();
+  return KEYWORDS.some(k=>text.includes(k));
+};
 // ✅ Dedupe recurring / multi-day events
 function getEventKey(e) {
   return (
@@ -62,7 +65,7 @@ export default function Dashboard() {
   const [dateTo, setDateTo] = useState("");
   const [endBefore, setEndBefore] = useState("");
   const [keywordOnly, setKeywordOnly] = useState(false);
-
+  const [keywordSort, setKeyWordSort]=useState(false);
   const [page, setPage] = useState(1);
   const perPage = 10;
 
@@ -103,9 +106,10 @@ export default function Dashboard() {
         end <= new Date(endBefore);
 
       const keywordOK = !keywordOnly || isKeywordEvent(e);
+      const meetingOK=!meetingsOnly || isMeeting(e);
 
       return (
-        matchesText && afterStart && beforeStart && endCutoffOK && keywordOK
+        matchesText && afterStart && beforeStart && endCutoffOK && keywordOK && meetingOK;
       );
     });
   }, [events, search, dateFrom, dateTo, endBefore, keywordOnly]);
@@ -113,6 +117,15 @@ export default function Dashboard() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const paginated = filtered.slice((page - 1) * perPage, page * perPage);
 
+  let sorted=[...filtered];
+
+  if (keywordSort){
+    sorted.sort((a,b)=>{
+      const aKey=containsKeyword(a) ? 1 : 0;
+      const bKey=containsKeyword(b) ? 1 : 0;
+      return bKey-aKey;
+    });
+  }
   return (
     <>
       <Header />
