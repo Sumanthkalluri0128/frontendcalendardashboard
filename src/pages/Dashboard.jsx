@@ -109,7 +109,7 @@ export default function Dashboard() {
       const meetingOK=!meetingsOnly || isMeeting(e);
 
       return (
-        matchesText && afterStart && beforeStart && endCutoffOK && keywordOK && meetingOK;
+        matchesText && afterStart && beforeStart && endCutoffOK && keywordOK && meetingOK
       );
     });
   }, [events, search, dateFrom, dateTo, endBefore, keywordOnly]);
