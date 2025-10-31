@@ -6,48 +6,55 @@ import EventTable from "../components/EventTable";
 import { exportToCSV } from "../utils/exportCSV";
 import "../styles/dashboard.css";
 
+// Keywords for security/expiry type events
 const KEYWORDS = [
-  "expire","expired","expiry","renewal","renew",
-  "password","expiring","cert","certificate","certs",
+  "expire",
+  "expired",
+  "expiry",
+  "renewal",
+  "renew",
+  "password",
+  "expiring",
+  "cert",
+  "certificate",
+  "certs",
 ];
 
+// ✅ Determine unique key for repeated events
 function getEventKey(e) {
   if (e.recurringEventId) return `r:${e.recurringEventId}`;
   if (e.iCalUID) return `i:${e.iCalUID}`;
   if (e.id) return `id:${e.id}`;
+
   const s = e.summary || "";
-  const startRaw = e.start?.dateTime || e.start?.date || "";
-  return `f:${s}|${startRaw}`;
+  const start = e.start?.dateTime || e.start?.date || "";
+  const end = e.end?.dateTime || e.end?.date || "";
+  return `f:${s}|${start}|${end}`;
 }
 
-// ✅ merge events correctly & preserve merged dates for filter
+// ✅ Deduplicate events (keep earliest occurrence)
 function uniqueByKey(events) {
-  const groups = new Map();
+  const map = new Map();
 
   for (const ev of events) {
     const key = getEventKey(ev);
-    const evStart = new Date(ev.start?.dateTime || ev.start?.date);
-    const evEnd = new Date(ev.end?.dateTime || ev.end?.date);
 
-    if (!groups.has(key)) {
-      groups.set(key, {
-        ...ev,
-        _start: evStart,
-        _end: evEnd,
-      });
+    if (!map.has(key)) {
+      map.set(key, ev);
       continue;
     }
 
-    const ex = groups.get(key);
-    if (evStart < ex._start) ex._start = evStart;
-    if (evEnd > ex._end) ex._end = evEnd;
-  }
+    const existing = map.get(key);
+    const existingStart = new Date(
+      existing.start.dateTime || existing.start.date
+    ).getTime();
+    const newStart = new Date(ev.start.dateTime || ev.start.date).getTime();
 
-  return Array.from(groups.values()).map((e) => ({
-    ...e,
-    start: { dateTime: e._start.toISOString() },
-    end: { dateTime: e._end.toISOString() },
-  }));
+    if (newStart < existingStart) {
+      map.set(key, ev);
+    }
+  }
+  return Array.from(map.values());
 }
 
 export default function Dashboard() {
@@ -56,14 +63,16 @@ export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [endBefore, setEndBefore] = useState("");
   const [keywordOnly, setKeywordOnly] = useState(false);
+  const [endBefore, setEndBefore] = useState("");
 
   const [page, setPage] = useState(1);
   const perPage = 10;
 
   useEffect(() => {
-    if (user || localStorage.getItem("token")) fetchEvents();
+    if (user || localStorage.getItem("token")) {
+      fetchEvents();
+    }
   }, [user, fetchEvents]);
 
   const isKeywordEvent = (e) => {
@@ -71,7 +80,7 @@ export default function Dashboard() {
     return KEYWORDS.some((k) => text.includes(k));
   };
 
-  // ✅ filtering using merged end date logic
+  // ✅ Filtering logic
   const filtered = useMemo(() => {
     if (!events) return [];
 
@@ -79,64 +88,100 @@ export default function Dashboard() {
 
     return uniqueEvents.filter((e) => {
       const s = search.toLowerCase();
+      const start = new Date(e.start.dateTime || e.start.date);
+      const end = new Date(e.end.dateTime || e.end.date);
 
-      const start = new Date(e.start.dateTime);
-      const end = new Date(e.end.dateTime);
-
-      const matchText =
+      const matchesText =
         (e.summary || "").toLowerCase().includes(s) ||
         (e.organizer?.email || "").toLowerCase().includes(s);
 
-      const afterFrom = !dateFrom || start >= new Date(dateFrom);
-      const beforeTo = !dateTo || start <= new Date(dateTo);
+      const afterStart = !dateFrom || start >= new Date(dateFrom);
+      const beforeStart = !dateTo || start <= new Date(dateTo);
 
-      // ✅ fix: now filtering based on merged `_end`
+      // ✅ NEW: show events where end <= selected end date
       const beforeEndCutoff = !endBefore || end <= new Date(endBefore);
 
       const keywordPass = !keywordOnly || isKeywordEvent(e);
 
-      return matchText && afterFrom && beforeTo && beforeEndCutoff && keywordPass;
+      return (
+        matchesText &&
+        afterStart &&
+        beforeStart &&
+        beforeEndCutoff &&
+        keywordPass
+      );
     });
   }, [events, search, dateFrom, dateTo, endBefore, keywordOnly]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const paginated = filtered.slice((page - 1) * perPage, page * perPage);
 
+  const renderContent = () => {
+    if (loading && events.length === 0)
+      return <div className="dashboard-message">Loading events...</div>;
+
+    if (error)
+      return (
+        <div className="dashboard-message error">
+          Error: {error}. Please try logging in again.
+        </div>
+      );
+
+    if (events.length === 0)
+      return (
+        <div className="dashboard-message">
+          No events found in your calendar.
+        </div>
+      );
+
+    return (
+      <>
+        <EventTable events={paginated} />
+        {totalPages > 1 && (
+          <div className="pagination">
+            <button disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+              Prev
+            </button>
+            <span>
+              Page {page} / {totalPages}
+            </span>
+            <button
+              disabled={page === totalPages}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </button>
+          </div>
+        )}
+      </>
+    );
+  };
+
   return (
     <>
       <Header />
       <div className="dashboard-container">
         <EventToolbar
-          search={search} setSearch={setSearch}
-          dateFrom={dateFrom} setDateFrom={setDateFrom}
-          dateTo={dateTo} setDateTo={setDateTo}
-          endBefore={endBefore} setEndBefore={setEndBefore}
-          meetingsOnly={keywordOnly} setMeetingsOnly={setKeywordOnly}
+          search={search}
+          setSearch={setSearch}
+          dateFrom={dateFrom}
+          setDateFrom={setDateFrom}
+          dateTo={dateTo}
+          setDateTo={setDateTo}
+          meetingsOnly={keywordOnly}
+          setMeetingsOnly={setKeywordOnly}
+          endBefore={endBefore}
+          setEndBefore={setEndBefore}
           exportCSV={() => exportToCSV(filtered)}
         />
 
-        {loading && events.length === 0 && (
-          <div className="dashboard-message">Loading events...</div>
+        {endBefore && (
+          <div className="info-tag">
+            Showing events ending on or before: <b>{endBefore}</b>
+          </div>
         )}
 
-        {error && <div className="dashboard-message error">{error}</div>}
-
-        {!loading && events.length === 0 && (
-          <div className="dashboard-message">No events found.</div>
-        )}
-
-        {!loading && events.length > 0 && (
-          <>
-            <EventTable events={paginated} />
-            {totalPages > 1 && (
-              <div className="pagination">
-                <button disabled={page === 1} onClick={() => setPage(p => p - 1)}>Prev</button>
-                <span>Page {page}/{totalPages}</span>
-                <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Next</button>
-              </div>
-            )}
-          </>
-        )}
+        {renderContent()}
       </div>
     </>
   );

@@ -1,4 +1,5 @@
-import { Download, Search, Filter } from "lucide-react";
+import React from "react";
+import "../styles/dashboard.css";
 
 export default function EventToolbar({
   search,
@@ -8,70 +9,72 @@ export default function EventToolbar({
   dateTo,
   setDateTo,
   endBefore,
-  setEndBefore, // ✅ new props
+  setEndBefore,
   meetingsOnly,
   setMeetingsOnly,
   exportCSV,
 }) {
   return (
-    <div className="toolbar">
-      {/* Search */}
-      <div className="toolbar-section">
-        <div className="search-box">
-          <Search size={16} />
+    <div className="toolbar-container">
+      <h3 className="filter-heading">🔎 Search & Filters</h3>
+
+      <div className="toolbar-grid">
+        {/* Search */}
+        <div className="toolbar-group">
+          <label className="filter-label">Search</label>
           <input
-            placeholder="Search events..."
+            type="text"
+            placeholder="Search event or organizer"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-      </div>
 
-      {/* Date Filters */}
-      <div className="toolbar-section">
-        <input
-          type="date"
-          className="date-input"
-          value={dateFrom}
-          onChange={(e) => setDateFrom(e.target.value)}
-        />
-        <input
-          type="date"
-          className="date-input"
-          value={dateTo}
-          onChange={(e) => setDateTo(e.target.value)}
-        />
-        <input
-          type="date"
-          className="date-input"
-          value={endBefore}
-          onChange={(e) => setEndBefore(e.target.value)}
-        />
+        {/* From Date */}
+        <div className="toolbar-group">
+          <label className="filter-label">Start From</label>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+          />
+        </div>
 
-        <span
-          className="clear-btn"
-          onClick={() => {
-            setDateFrom("");
-            setDateTo("");
-            setEndBefore("");
-          }}
-        >
-          Clear
-        </span>
-      </div>
+        {/* To Date */}
+        <div className="toolbar-group">
+          <label className="filter-label">Start To</label>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+          />
+        </div>
 
-      {/* Filters & Export */}
-      <div className="toolbar-section">
-        <button
-          className={`btn btn-toggle ${meetingsOnly ? "active" : ""}`}
-          onClick={() => setMeetingsOnly(!meetingsOnly)}
-        >
-          <Filter size={14} /> Expiry Events
-        </button>
+        {/* End Before */}
+        <div className="toolbar-group">
+          <label className="filter-label">End Before</label>
+          <input
+            type="date"
+            value={endBefore}
+            onChange={(e) => setEndBefore(e.target.value)}
+          />
+        </div>
 
-        <button className="btn btn-primary" onClick={exportCSV}>
-          <Download size={14} /> Export CSV
-        </button>
+        {/* Keyword/Expiry filter toggle */}
+        <div className="toolbar-group checkbox-group">
+          <label className="filter-label">Expiry Events Only</label>
+          <input
+            type="checkbox"
+            checked={meetingsOnly}
+            onChange={(e) => setMeetingsOnly(e.target.checked)}
+          />
+        </div>
+
+        {/* Export */}
+        <div className="toolbar-group">
+          <label className="filter-label">Export</label>
+          <button onClick={exportCSV}>Download CSV</button>
+        </div>
       </div>
     </div>
   );
