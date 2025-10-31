@@ -1,5 +1,4 @@
-import React from "react";
-import "../styles/dashboard.css";
+import { Download, Search } from "lucide-react";
 
 export default function EventToolbar({
   search,
@@ -15,66 +14,70 @@ export default function EventToolbar({
   exportCSV,
 }) {
   return (
-    <div className="toolbar-container">
-      <h3 className="filter-heading">🔎 Search & Filters</h3>
+    <div className="toolbar">
+      <h3 className="filter-heading">Search & Filters</h3>
 
-      <div className="toolbar-grid">
-        {/* Search */}
-        <div className="toolbar-group">
-          <label className="filter-label">Search</label>
+      <div className="toolbar-section">
+        <label className="filter-label">Search</label>
+        <div className="search-box">
+          <Search size={16} />
           <input
-            type="text"
-            placeholder="Search event or organizer"
+            placeholder="Search events..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+      </div>
 
-        {/* From Date */}
-        <div className="toolbar-group">
-          <label className="filter-label">Start From</label>
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-          />
-        </div>
+      <div className="toolbar-section">
+        <label className="filter-label">Start From</label>
+        <input
+          type="date"
+          className="date-input"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+        />
 
-        {/* To Date */}
-        <div className="toolbar-group">
-          <label className="filter-label">Start To</label>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-          />
-        </div>
+        <label className="filter-label">Start To</label>
+        <input
+          type="date"
+          className="date-input"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+        />
 
-        {/* End Before */}
-        <div className="toolbar-group">
-          <label className="filter-label">End Before</label>
-          <input
-            type="date"
-            value={endBefore}
-            onChange={(e) => setEndBefore(e.target.value)}
-          />
-        </div>
+        <label className="filter-label">End Before</label>
+        <input
+          type="date"
+          className="date-input"
+          value={endBefore}
+          onChange={(e) => setEndBefore(e.target.value)}
+        />
 
-        {/* Keyword/Expiry filter toggle */}
-        <div className="toolbar-group checkbox-group">
-          <label className="filter-label">Expiry Events Only</label>
-          <input
-            type="checkbox"
-            checked={meetingsOnly}
-            onChange={(e) => setMeetingsOnly(e.target.checked)}
-          />
-        </div>
+        <span
+          className="clear-btn"
+          onClick={() => {
+            setDateFrom("");
+            setDateTo("");
+            setEndBefore("");
+          }}
+        >
+          Clear
+        </span>
+      </div>
 
-        {/* Export */}
-        <div className="toolbar-group">
-          <label className="filter-label">Export</label>
-          <button onClick={exportCSV}>Download CSV</button>
-        </div>
+      <div className="toolbar-section">
+        <label className="filter-label">Expiry Events Only</label>
+        <button
+          className={`btn btn-toggle ${meetingsOnly ? "active" : ""}`}
+          onClick={() => setMeetingsOnly(!meetingsOnly)}
+        >
+          Expiry Filter
+        </button>
+
+        <button className="btn btn-primary" onClick={exportCSV}>
+          <Download size={14} /> Export CSV
+        </button>
       </div>
     </div>
   );

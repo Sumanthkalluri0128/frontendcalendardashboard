@@ -1,22 +1,27 @@
-import { ExternalLink, Clock, User, Calendar } from "lucide-react";
-
-const formatDate = (d) => {
-  const date = new Date(d);
-  return date.toLocaleDateString([], {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-};
+import { ExternalLink, Clock, User } from "lucide-react";
 
 export default function EventTable({ events }) {
+  const formatDate = (d) =>
+    new Date(d).toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+
+  const formatTime = (d) =>
+    new Date(d).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
   return (
     <div className="table-container">
       <table>
         <thead>
           <tr>
-            <th>Start Date</th>
-            <th>End Date</th>
+            <th>Start</th>
+            <th>End</th>
             <th>Time</th>
             <th>Event</th>
             <th>Organizer</th>
@@ -34,55 +39,20 @@ export default function EventTable({ events }) {
           )}
 
           {events.map((event) => {
-            const startRaw = event.start.dateTime || event.start.date;
-            const endRaw = event.end.dateTime || event.end.date;
-
-            const start = new Date(startRaw);
-            const end = new Date(endRaw);
-
-            const isAllDay = !event.start.dateTime; // Google uses `date` for all-day events
+            const start = event.start?.dateTime || event.start?.date;
+            const end = event.end?.dateTime || event.end?.date;
 
             return (
               <tr key={event.id}>
-                {/* ✅ START DATE */}
+                <td>{formatDate(start)}</td>
+                <td>{formatDate(end)}</td>
                 <td>
-                  <Calendar size={14} /> {formatDate(start)}
+                  <Clock size={14} /> {formatTime(start)} – {formatTime(end)}
                 </td>
-
-                {/* ✅ END DATE */}
-                <td>
-                  <Calendar size={14} /> {formatDate(end)}
-                </td>
-
-                {/* ✅ TIME */}
-                <td>
-                  {isAllDay ? (
-                    "All Day"
-                  ) : (
-                    <>
-                      <Clock size={14} />{" "}
-                      {start.toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}{" "}
-                      -{" "}
-                      {end.toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </>
-                  )}
-                </td>
-
-                {/* ✅ EVENT NAME */}
                 <td>{event.summary || "(No Title)"}</td>
-
-                {/* ✅ ORGANIZER */}
                 <td>
                   <User size={14} /> {event.organizer?.email}
                 </td>
-
-                {/* ✅ OPEN LINK */}
                 <td>
                   <a href={event.htmlLink} target="_blank" rel="noreferrer">
                     <ExternalLink size={14} /> Open
