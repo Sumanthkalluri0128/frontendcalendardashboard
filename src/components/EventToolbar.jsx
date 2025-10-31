@@ -53,7 +53,7 @@ export default function EventToolbar({
           className={`btn btn-toggle ${meetingsOnly ? "active" : ""}`}
           onClick={() => setMeetingsOnly(!meetingsOnly)}
         >
-          <Users size={14} /> Meetings
+          <Users size={14} /> Cert & Password activities
         </button>
 
         <button className="btn btn-primary" onClick={exportCSV}>
