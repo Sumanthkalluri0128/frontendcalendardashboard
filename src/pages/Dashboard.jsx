@@ -114,8 +114,8 @@ export default function Dashboard() {
     });
   }, [events, search, dateFrom, dateTo, endBefore, keywordOnly]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
-  const paginated = filtered.slice((page - 1) * perPage, page * perPage);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / perPage));
+  const paginated = sorted.slice((page - 1) * perPage, page * perPage);
 
   let sorted=[...filtered];
 
