@@ -7,37 +7,27 @@ import { exportToCSV } from "../utils/exportCSV";
 import "../styles/dashboard.css";
 
 const KEYWORDS = [
-  "expire",
-  "expired",
-  "expiry",
-  "renewal",
-  "renew",
-  "password",
-  "expiring",
-  "cert",
-  "certificate",
-  "certs",
+  "expire","expired","expiry","renewal","renew",
+  "password","expiring","cert","certificate","certs",
 ];
 
-// ✅ unified key to group recurring & multi-day events
 function getEventKey(e) {
   if (e.recurringEventId) return `r:${e.recurringEventId}`;
   if (e.iCalUID) return `i:${e.iCalUID}`;
   if (e.id) return `id:${e.id}`;
-
   const s = e.summary || "";
   const startRaw = e.start?.dateTime || e.start?.date || "";
   return `f:${s}|${startRaw}`;
 }
 
-// ✅ merge multi-day & recurring events properly
+// ✅ merge events correctly & preserve merged dates for filter
 function uniqueByKey(events) {
   const groups = new Map();
 
   for (const ev of events) {
     const key = getEventKey(ev);
-    const evStart = new Date(ev.start?.dateTime || ev.start?.date || 0);
-    const evEnd = new Date(ev.end?.dateTime || ev.end?.date || 0);
+    const evStart = new Date(ev.start?.dateTime || ev.start?.date);
+    const evEnd = new Date(ev.end?.dateTime || ev.end?.date);
 
     if (!groups.has(key)) {
       groups.set(key, {
@@ -48,9 +38,9 @@ function uniqueByKey(events) {
       continue;
     }
 
-    const e = groups.get(key);
-    if (evStart < e._start) e._start = evStart;
-    if (evEnd > e._end) e._end = evEnd;
+    const ex = groups.get(key);
+    if (evStart < ex._start) ex._start = evStart;
+    if (evEnd > ex._end) ex._end = evEnd;
   }
 
   return Array.from(groups.values()).map((e) => ({
@@ -66,16 +56,14 @@ export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [endBefore, setEndBefore] = useState(""); // ✅ NEW FILTER
+  const [endBefore, setEndBefore] = useState("");
   const [keywordOnly, setKeywordOnly] = useState(false);
 
   const [page, setPage] = useState(1);
   const perPage = 10;
 
   useEffect(() => {
-    if (user || localStorage.getItem("token")) {
-      fetchEvents();
-    }
+    if (user || localStorage.getItem("token")) fetchEvents();
   }, [user, fetchEvents]);
 
   const isKeywordEvent = (e) => {
@@ -83,7 +71,7 @@ export default function Dashboard() {
     return KEYWORDS.some((k) => text.includes(k));
   };
 
-  // ✅ final filtering logic
+  // ✅ filtering using merged end date logic
   const filtered = useMemo(() => {
     if (!events) return [];
 
@@ -91,20 +79,23 @@ export default function Dashboard() {
 
     return uniqueEvents.filter((e) => {
       const s = search.toLowerCase();
-      const textMatch =
+
+      const start = new Date(e.start.dateTime);
+      const end = new Date(e.end.dateTime);
+
+      const matchText =
         (e.summary || "").toLowerCase().includes(s) ||
         (e.organizer?.email || "").toLowerCase().includes(s);
 
-      const start = new Date(e.start.dateTime || e.start.date || 0);
-      const end = new Date(e.end.dateTime || e.end.date || 0);
+      const afterFrom = !dateFrom || start >= new Date(dateFrom);
+      const beforeTo = !dateTo || start <= new Date(dateTo);
 
-      const fromOK = !dateFrom || start >= new Date(dateFrom);
-      const toOK = !dateTo || start <= new Date(dateTo);
-      const endBeforeOK = !endBefore || end <= new Date(endBefore);
+      // ✅ fix: now filtering based on merged `_end`
+      const beforeEndCutoff = !endBefore || end <= new Date(endBefore);
 
-      const keywordOK = !keywordOnly || isKeywordEvent(e);
+      const keywordPass = !keywordOnly || isKeywordEvent(e);
 
-      return textMatch && fromOK && toOK && endBeforeOK && keywordOK;
+      return matchText && afterFrom && beforeTo && beforeEndCutoff && keywordPass;
     });
   }, [events, search, dateFrom, dateTo, endBefore, keywordOnly]);
 
@@ -116,16 +107,11 @@ export default function Dashboard() {
       <Header />
       <div className="dashboard-container">
         <EventToolbar
-          search={search}
-          setSearch={setSearch}
-          dateFrom={dateFrom}
-          setDateFrom={setDateFrom}
-          dateTo={dateTo}
-          setDateTo={setDateTo}
-          endBefore={endBefore} // ✅ NEW
-          setEndBefore={setEndBefore} // ✅ NEW
-          meetingsOnly={keywordOnly}
-          setMeetingsOnly={setKeywordOnly}
+          search={search} setSearch={setSearch}
+          dateFrom={dateFrom} setDateFrom={setDateFrom}
+          dateTo={dateTo} setDateTo={setDateTo}
+          endBefore={endBefore} setEndBefore={setEndBefore}
+          meetingsOnly={keywordOnly} setMeetingsOnly={setKeywordOnly}
           exportCSV={() => exportToCSV(filtered)}
         />
 
@@ -133,16 +119,10 @@ export default function Dashboard() {
           <div className="dashboard-message">Loading events...</div>
         )}
 
-        {error && (
-          <div className="dashboard-message error">
-            Error: {error}. Please try logging in again.
-          </div>
-        )}
+        {error && <div className="dashboard-message error">{error}</div>}
 
         {!loading && events.length === 0 && (
-          <div className="dashboard-message">
-            No events found in your calendar.
-          </div>
+          <div className="dashboard-message">No events found.</div>
         )}
 
         {!loading && events.length > 0 && (
@@ -150,21 +130,9 @@ export default function Dashboard() {
             <EventTable events={paginated} />
             {totalPages > 1 && (
               <div className="pagination">
-                <button
-                  disabled={page === 1}
-                  onClick={() => setPage((p) => p - 1)}
-                >
-                  Prev
-                </button>
-                <span>
-                  Page {page} / {totalPages}
-                </span>
-                <button
-                  disabled={page === totalPages}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  Next
-                </button>
+                <button disabled={page === 1} onClick={() => setPage(p => p - 1)}>Prev</button>
+                <span>Page {page}/{totalPages}</span>
+                <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Next</button>
               </div>
             )}
           </>
