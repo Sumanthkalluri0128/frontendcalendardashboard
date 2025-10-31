@@ -141,6 +141,8 @@ export default function Dashboard() {
           setEndBefore={setEndBefore}
           meetingsOnly={keywordOnly}
           setMeetingsOnly={setKeywordOnly}
+          keywordSort={keywordSort}
+          setKeywordSort={setKeyWordSort}
           exportCSV={() => exportToCSV(filtered)}
         />
 
