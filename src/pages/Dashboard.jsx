@@ -1,58 +1,83 @@
-// client/src/pages/Dashboard.jsx
-import React, { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import Header from "../components/Header";
+import EventToolbar from "../components/EventToolbar";
+import EventTable from "../components/EventTable";
+import { exportToCSV } from "../utils/exportCSV";
+import "../styles/dashboard.css";
 
 export default function Dashboard() {
-  const { user, events, fetchEvents, loading, signIn, logout, error } = useAuth();
+  const { events, fetchEvents, user } = useAuth();
+
+  const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [meetingsOnly, setMeetingsOnly] = useState(false);
+
+  const [page, setPage] = useState(1);
+  const perPage = 10;
 
   useEffect(() => {
-    if (user) fetchEvents();
-  }, [user, fetchEvents]);
+    fetchEvents();
+  }, []);
 
-  if (loading) return <div style={{ padding: 20 }}>Loading...</div>;
+  const isMeeting = (e) =>
+    e?.attendees?.some((a) => a.email === user?.email) &&
+    e?.organizer?.email !== user?.email;
 
-  if (!user)
+  let filtered = events.filter((e) => {
+    const s = search.toLowerCase();
+    const date = new Date(e.start.dateTime || e.start.date);
+
     return (
-      <div style={{ padding: 20 }}>
-        <h2>Please sign in with Google</h2>
-        <button onClick={signIn}>Sign in with Google</button>
-      </div>
+      (e.summary?.toLowerCase().includes(s) ||
+        e.organizer?.email?.toLowerCase().includes(s)) &&
+      (!dateFrom || date >= new Date(dateFrom)) &&
+      (!dateTo || date <= new Date(dateTo))
     );
+  });
+
+  if (meetingsOnly) filtered = filtered.filter(isMeeting);
+
+  const totalPages = Math.ceil(filtered.length / perPage);
+  const paginated = filtered.slice((page - 1) * perPage, page * perPage);
 
   return (
-    <div style={{ padding: 20 }}>
-      <header style={{ display: "flex", justifyContent: "space-between" }}>
-        <div>
-          <h1>Welcome, {user.name || user.email}</h1>
-        </div>
-        <div>
-          <button onClick={fetchEvents} style={{ marginRight: 8 }}>
-            Refresh
-          </button>
-          <button onClick={logout}>Logout</button>
-        </div>
-      </header>
+    <>
+      <Header />
 
-      {error && <div style={{ color: "red" }}>Error: {error}</div>}
+      <div className="dashboard-container">
+        <EventToolbar
+          search={search}
+          setSearch={setSearch}
+          dateFrom={dateFrom}
+          setDateFrom={setDateFrom}
+          dateTo={dateTo}
+          setDateTo={setDateTo}
+          meetingsOnly={meetingsOnly}
+          setMeetingsOnly={setMeetingsOnly}
+          exportCSV={() => exportToCSV(filtered)}
+        />
 
-      <section style={{ marginTop: 20 }}>
-        <h2>Your upcoming events</h2>
-        {events.length === 0 ? (
-          <p>No upcoming events found.</p>
-        ) : (
-          <ul>
-            {events.map((ev) => (
-              <li key={ev.id} style={{ marginBottom: 12 }}>
-                <strong>{ev.summary || "(No title)"}</strong>
-                <div>
-                  {ev.start?.dateTime || ev.start?.date} — {ev.end?.dateTime || ev.end?.date}
-                </div>
-                <div>Organizer: {ev.organizer?.email || "—"}</div>
-              </li>
-            ))}
-          </ul>
+        <EventTable events={paginated} />
+
+        {totalPages > 1 && (
+          <div className="pagination">
+            <button disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+              Prev
+            </button>
+            <span>
+              Page {page} / {totalPages}
+            </span>
+            <button
+              disabled={page === totalPages}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </button>
+          </div>
         )}
-      </section>
-    </div>
+      </div>
+    </>
   );
 }

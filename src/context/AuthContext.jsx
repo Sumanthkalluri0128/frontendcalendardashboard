@@ -1,81 +1,66 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { API_BASE_URL } from "../api";
-
+import { createContext, useContext, useState } from "react";
 
 const AuthContext = createContext();
 
-
 export const AuthProvider = ({ children }) => {
-const [events, setEvents] = useState([]);
-const [user, setUser] = useState(null);
-const [loading, setLoading] = useState(true);
-const [error, setError] = useState(null);
+  // ✅ Dynamic backend URL switch
+  const API_URL = "https://calendarcustomdashboard.onrender.com";
 
+  const [events, setEvents] = useState([]);
+  const [user, setUser] = useState(null);
 
-const fetchEvents = useCallback(async () => {
-setError(null);
-try {
-const res = await fetch(`${API_BASE_URL}/auth/events`, {
-credentials: "include",
-});
+  // ✅ Google Login redirect dynamic
+  const signIn = () => {
+    window.location.href = `${API_URL}/api/auth/google`;
+  };
 
+  const logout = () => {
+    setUser(null);
+    setEvents([]);
+    window.location.href = "/";
+  };
 
-if (res.status === 401) {
-setEvents([]);
-setUser(null);
-return;
-}
+  // ✅ Fetch events from backend
+  const fetchEvents = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/auth/events`, {
+        credentials: "include", // ✅ keep cookies/session
+      });
 
+      const data = await res.json();
 
-const data = await res.json();
-setEvents(data.events || []);
-} catch (err) {
-setError("Failed to fetch events");
-setEvents([]);
-}
-}, []);
+      if (data.error) {
+        console.log("Auth error:", data.error);
+        return;
+      }
 
+      setEvents(data || []);
 
-// Restore session
-useEffect(() => {
-(async () => {
-try {
-const res = await fetch(`${API_BASE_URL}/auth/me`, {
-credentials: "include",
-});
-if (res.ok) {
-const data = await res.json();
-setUser(data);
-await fetchEvents();
-}
-} catch (_) {}
-setLoading(false);
-})();
-}, [fetchEvents]);
+      // ✅ auto set user from calendar data
+      if (data.length > 0) {
+        setUser({
+          email: data[0]?.organizer?.email,
+          name: data[0]?.organizer?.displayName || "User",
+        });
+      }
+    } catch (err) {
+      console.log("Event fetch error", err);
+    }
+  };
 
-
-const signIn = () => {
-window.location.href = `${API_BASE_URL}/auth/google`;
+  return (
+    <AuthContext.Provider
+      value={{
+        events,
+        fetchEvents,
+        signIn,
+        logout,
+        user,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };
-
-
-const logout = async () => {
-await fetch(`${API_BASE_URL}/auth/logout`, {
-method: "POST",
-credentials: "include",
-});
-setUser(null);
-setEvents([]);
-window.location.href = "/";
-};
-
-
-return (
-<AuthContext.Provider value={{ events, fetchEvents, signIn, logout, user, loading, error }}>
-{children}
-</AuthContext.Provider>
-);
-};
-
 
 export const useAuth = () => useContext(AuthContext);
