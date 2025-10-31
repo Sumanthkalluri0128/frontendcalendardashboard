@@ -69,21 +69,13 @@ export default function EventToolbar({
       </div>
 
       <div className="toolbar-section">
-        <label className="filter-label">Expiry Events Only</label>
-        <button
-          className={`btn btn-toggle ${meetingsOnly ? "active" : ""}`}
-          onClick={() => setMeetingsOnly(!meetingsOnly)}
-        >
-          Expiry Filter
-        </button>
-
+        
         {/* --- ADDED BUTTON FOR KEYWORD SORT --- */}
-        <label className="filter-label">Sort by Expiry</label>
         <button
           className={`btn btn-toggle ${keywordSort ? "active" : ""}`}
           onClick={() => setKeywordSort(!keywordSort)}
         >
-          Sort
+          Meeting Only
         </button>
 
         <button className="btn btn-primary" onClick={exportCSV}>
