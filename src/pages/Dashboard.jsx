@@ -19,7 +19,7 @@ const KEYWORDS = [
   "certs",
 ];
 
-// ✅ Deduping logic: collapse multiday/recurring events & preserve full span
+// ✅ Dedupe recurring / multi-day events
 function getEventKey(e) {
   return (
     e.recurringEventId ||
@@ -43,7 +43,6 @@ function uniqueByKey(events) {
     }
 
     const existing = map.get(key);
-
     if (start < existing.__start) existing.__start = start;
     if (end > existing.__end) existing.__end = end;
   }
@@ -85,6 +84,7 @@ export default function Dashboard() {
 
     return unique.filter((e) => {
       const s = search.toLowerCase();
+
       const start = new Date(e.start.dateTime || e.start.date);
       const end = new Date(e.end.dateTime || e.end.date);
 
@@ -95,7 +95,12 @@ export default function Dashboard() {
       const afterStart = !dateFrom || start >= new Date(dateFrom);
       const beforeStart = !dateTo || start <= new Date(dateTo);
 
-      const endCutoffOK = !endBefore || end <= new Date(endBefore);
+      // ✅ NEW LOGIC:
+      // include if start OR end <= selected endBefore date
+      const endCutoffOK =
+        !endBefore ||
+        start <= new Date(endBefore) ||
+        end <= new Date(endBefore);
 
       const keywordOK = !keywordOnly || isKeywordEvent(e);
 
@@ -128,7 +133,7 @@ export default function Dashboard() {
 
         {endBefore && (
           <div className="info-tag">
-            Showing events ending on or before: <b>{endBefore}</b>
+            Showing events starting or ending on or before: <b>{endBefore}</b>
           </div>
         )}
 
