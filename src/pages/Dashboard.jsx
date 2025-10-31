@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "../context/AuthContext";
-import Header from "../components/Header";
-import EventToolbar from "../components/EventToolbar";
-import EventTable from "../components/EventTable";
-import { exportToCSV } from "../utils/exportCSV";
-import "../styles/dashboard.css";
+import { useAuth } from "./context/AuthContext";
+import Header from "./Header";
+import EventToolbar from "./EventToolbar";
+import EventTable from "./EventTable";
+import { exportToCSV } from "./exportCSV";
+import "./dashboard.css";
 
 export default function Dashboard() {
-  const { events, fetchEvents, user } = useAuth();
+  const { events, fetchEvents, user, loading, error } = useAuth();
 
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -18,8 +18,10 @@ export default function Dashboard() {
   const perPage = 10;
 
   useEffect(() => {
-    fetchEvents();
-  }, []);
+    if (user || localStorage.getItem("token")) {
+      fetchEvents();
+    }
+  }, [user, fetchEvents]);
 
   const isMeeting = (e) =>
     e?.attendees?.some((a) => a.email === user?.email) &&
@@ -27,7 +29,7 @@ export default function Dashboard() {
 
   let filtered = events.filter((e) => {
     const s = search.toLowerCase();
-    const date = new Date(e.start.dateTime || e.start.date);
+    const date = new Date(e.start.dateTime || e.start.date || 0);
 
     return (
       (e.summary?.toLowerCase().includes(s) ||
@@ -39,28 +41,33 @@ export default function Dashboard() {
 
   if (meetingsOnly) filtered = filtered.filter(isMeeting);
 
-  const totalPages = Math.ceil(filtered.length / perPage);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const paginated = filtered.slice((page - 1) * perPage, page * perPage);
 
-  return (
-    <>
-      <Header />
+  const renderContent = () => {
+    if (loading && events.length === 0) {
+      return <div className="dashboard-message">Loading events...</div>;
+    }
 
-      <div className="dashboard-container">
-        <EventToolbar
-          search={search}
-          setSearch={setSearch}
-          dateFrom={dateFrom}
-          setDateFrom={setDateFrom}
-          dateTo={dateTo}
-          setDateTo={setDateTo}
-          meetingsOnly={meetingsOnly}
-          setMeetingsOnly={setMeetingsOnly}
-          exportCSV={() => exportToCSV(filtered)}
-        />
+    if (error) {
+      return (
+        <div className="dashboard-message error">
+          Error: {error}. Please try logging in again.
+        </div>
+      );
+    }
 
+    if (events.length === 0) {
+      return (
+        <div className="dashboard-message">
+          No events found in your calendar.
+        </div>
+      );
+    }
+
+    return (
+      <>
         <EventTable events={paginated} />
-
         {totalPages > 1 && (
           <div className="pagination">
             <button disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
@@ -77,6 +84,26 @@ export default function Dashboard() {
             </button>
           </div>
         )}
+      </>
+    );
+  };
+
+  return (
+    <>
+      <Header />
+      <div className="dashboard-container">
+        <EventToolbar
+          search={search}
+          setSearch={setSearch}
+          dateFrom={dateFrom}
+          setDateFrom={setDateFrom}
+          dateTo={dateTo}
+          setDateTo={setDateTo}
+          meetingsOnly={meetingsOnly}
+          setMeetingsOnly={setMeetingsOnly}
+          exportCSV={() => exportToCSV(filtered)}
+        />
+        {renderContent()}
       </div>
     </>
   );
