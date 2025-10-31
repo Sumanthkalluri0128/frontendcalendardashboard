@@ -5,7 +5,18 @@ import EventToolbar from "../components/EventToolbar";
 import EventTable from "../components/EventTable";
 import { exportToCSV } from "../utils/exportCSV";
 import "../styles/dashboard.css";
-
+const KEYWORDS = [
+  "expire",
+  "expired",
+  "expiry",
+  "renewal",
+  "renew",
+  "password",
+  "expiring",
+  "cert",
+  "certificate",
+  "certs",
+];
 export default function Dashboard() {
   const { events, fetchEvents, user, loading, error } = useAuth();
 
@@ -23,9 +34,18 @@ export default function Dashboard() {
     }
   }, [user, fetchEvents]);
 
-  const isMeeting = (e) =>
-    e?.attendees?.some((a) => a.email === user?.email) &&
-    e?.organizer?.email !== user?.email;
+  const isKeywordEvent = (e) => {
+    const text = `${e.summary || ""} ${e.description || ""}`.toLowerCase();
+
+    // substring match (partial allowed)
+    return KEYWORDS.some((keyword) => text.includes(keyword));
+  };
+
+  const isMeeting = (e) => {
+    const text = `${e.summary || ""} ${e.description || ""}`.toLowerCase();
+
+    return KEYWORDS.some((keyword) => text.includes(keyword));
+  };
 
   let filtered = events.filter((e) => {
     const s = search.toLowerCase();
@@ -39,7 +59,7 @@ export default function Dashboard() {
     );
   });
 
-  if (meetingsOnly) filtered = filtered.filter(isMeeting);
+  if (meetingsOnly) filtered = filtered.filter(isKeywordEvent);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const paginated = filtered.slice((page - 1) * perPage, page * perPage);
