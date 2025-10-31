@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "./context/AuthContext";
-import Header from "./Header";
-import EventToolbar from "./EventToolbar";
-import EventTable from "./EventTable";
-import { exportToCSV } from "./exportCSV";
-import "./dashboard.css";
+import { useAuth } from "../context/AuthContext";
+import Header from "../components/Header";
+import EventToolbar from "../components/EventToolbar";
+import EventTable from "../components/EventTable";
+import { exportToCSV } from "../utils/exportCSV";
+import "../styles/dashboard.css";
 
 export default function Dashboard() {
   const { events, fetchEvents, user, loading, error } = useAuth();

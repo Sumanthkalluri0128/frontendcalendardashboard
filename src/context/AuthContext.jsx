@@ -1,4 +1,3 @@
-// frontend/src/context/AuthContext.jsx
 import React, {
   createContext,
   useContext,
@@ -48,7 +47,6 @@ export function AuthProvider({ children }) {
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchEvents = useCallback(async () => {
