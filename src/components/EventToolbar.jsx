@@ -75,7 +75,7 @@ export default function EventToolbar({
           Expiry Filter
         </button>
         <label className="filter-label">Meetings Only</label>
-        <button className={`btn btn-toggle ${meetingsOnly ? "active" : ""}`} onClick={()=>setMeetingsOnly(!meetingsOnly)}>
+        <button className={`btn btn-toggle ${keywordSort ? "active" : ""}`} onClick={()=>setKeyWordSort(!keywordSort)}>
           Meetings Only</button>
 
         <button className="btn btn-primary" onClick={exportCSV}>
