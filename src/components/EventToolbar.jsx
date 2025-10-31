@@ -75,7 +75,7 @@ export default function EventToolbar({
           className={`btn btn-toggle ${keywordSort ? "active" : ""}`}
           onClick={() => setKeywordSort(!keywordSort)}
         >
-          Meeting Only
+          Password & Cert Activities
         </button>
 
         <button className="btn btn-primary" onClick={exportCSV}>
